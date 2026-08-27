@@ -53,6 +53,26 @@
 		goto(`${base}/month/${year}/${parseInt(m)}/${parseInt(d)}`);
 	}
 
+	function goToMonth(targetYear: number, targetMonth: number) {
+		goto(`${base}/month/${targetYear}/${targetMonth}`);
+	}
+
+	function handlePrevMonth() {
+		if (month === 1) {
+			goToMonth(year - 1, 12);
+		} else {
+			goToMonth(year, month - 1);
+		}
+	}
+
+	function handleNextMonth() {
+		if (month === 12) {
+			goToMonth(year + 1, 1);
+		} else {
+			goToMonth(year, month + 1);
+		}
+	}
+
 	function handleSetupComplete() {
 		loadMonth();
 	}
@@ -85,6 +105,8 @@
 		{month}
 		{entries}
 		onDayClick={handleDayClick}
+		onPrevMonth={handlePrevMonth}
+		onNextMonth={handleNextMonth}
 	/>
 {/if}
 

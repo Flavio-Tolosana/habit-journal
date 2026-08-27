@@ -5,12 +5,16 @@
 		year,
 		month,
 		entries = [],
-		onDayClick
+		onDayClick,
+		onPrevMonth = () => {},
+		onNextMonth = () => {}
 	}: {
 		year: number;
 		month: number;
 		entries: Array<{ date: string }>;
 		onDayClick: (date: string) => void;
+		onPrevMonth?: () => void;
+		onNextMonth?: () => void;
 	} = $props();
 
 	let focusedIndex = $state(0);
@@ -19,17 +23,24 @@
 
 	const firstDayOfWeek = $derived(new Date(year, month - 1, 1).getDay());
 	const totalDays = $derived(getDaysInMonth(year, month));
+	const todayStr = $derived(() => {
+		const d = new Date();
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+			d.getDate()
+		).padStart(2, '0')}`;
+	});
 
 	const entryDates = $derived(new Set(entries.map((e) => e.date)));
 
 	const calendarCells = $derived.by(() => {
-		const cells: Array<{ day: number; date: string; hasEntry: boolean }> = [];
+		const today = todayStr();
+		const cells: Array<{ day: number; date: string; hasEntry: boolean; isToday: boolean }> = [];
 		for (let i = 0; i < firstDayOfWeek; i++) {
-			cells.push({ day: 0, date: '', hasEntry: false });
+			cells.push({ day: 0, date: '', hasEntry: false, isToday: false });
 		}
 		for (let d = 1; d <= totalDays; d++) {
 			const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-			cells.push({ day: d, date: dateStr, hasEntry: entryDates.has(dateStr) });
+			cells.push({ day: d, date: dateStr, hasEntry: entryDates.has(dateStr), isToday: dateStr === today });
 		}
 		return cells;
 	});
@@ -82,7 +93,23 @@
 </script>
 
 <div class="month-calendar">
-	<h2 class="calendar-title">{monthNames[month - 1]} {year}</h2>
+	<div class="calendar-header">
+		<button
+			class="nav-btn"
+			aria-label="Mes anterior"
+			onclick={onPrevMonth}
+		>
+			‹
+		</button>
+		<h2 class="calendar-title">{monthNames[month - 1]} {year}</h2>
+		<button
+			class="nav-btn"
+			aria-label="Mes siguiente"
+			onclick={onNextMonth}
+		>
+			›
+		</button>
+	</div>
 
 	<div class="calendar-grid" role="grid" aria-label="Calendario mensual">
 		{#each dayHeaders as header}
@@ -97,6 +124,7 @@
 				<button
 					class="day-cell"
 					class:has-entry={cell.hasEntry}
+					class:today={cell.isToday}
 					tabindex={cellIdx === focusedIndex ? 0 : -1}
 					role="gridcell"
 					aria-label="{cell.day} de {monthNames[month - 1]}"
@@ -126,6 +154,45 @@
 		font-weight: 600;
 		text-align: center;
 		color: var(--color-text);
+	}
+
+	.calendar-header {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+	}
+
+	.nav-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		border: none;
+		border-radius: 50%;
+		background: var(--color-primary-light);
+		color: var(--color-primary);
+		font-size: 1.5rem;
+		line-height: 1;
+		cursor: pointer;
+		transition: background-color 0.15s ease, color 0.15s ease;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.nav-btn:hover {
+		background-color: var(--color-primary);
+		color: white;
+	}
+
+	.nav-btn:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
+
+	.calendar-title {
+		min-width: 8rem;
+		text-align: center;
 	}
 
 	.calendar-grid {
@@ -176,6 +243,14 @@
 	.day-cell.has-entry {
 		background-color: var(--color-accent-light);
 		font-weight: 600;
+	}
+
+	.day-cell.today {
+		box-shadow: inset 0 0 0 2px var(--color-primary);
+	}
+
+	.day-cell.today.has-entry {
+		box-shadow: inset 0 0 0 2px var(--color-primary);
 	}
 
 	.day-number {
