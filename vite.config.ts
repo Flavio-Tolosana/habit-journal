@@ -3,6 +3,8 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vite';
 
+const base = process.env.BASE_PATH ?? '';
+
 export default defineConfig({
 	plugins: [
 		sveltekit({
@@ -14,7 +16,10 @@ export default defineConfig({
 				pages: 'build',
 				assets: 'build',
 				fallback: 'index.html'
-			})
+			}),
+			paths: {
+				base: base || undefined
+			}
 		}),
 		VitePWA({
 			registerType: 'autoUpdate',
@@ -26,9 +31,9 @@ export default defineConfig({
 				background_color: '#ffffff',
 				display: 'standalone',
 				icons: [
-					{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' },
-					{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-					{ src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+					{ src: `${base}/icon.svg`, sizes: 'any', type: 'image/svg+xml' },
+					{ src: `${base}/icon-192.png`, sizes: '192x192', type: 'image/png' },
+					{ src: `${base}/icon-512.png`, sizes: '512x512', type: 'image/png' }
 				]
 			},
 			workbox: {
