@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import DayView from '$lib/components/DayView.svelte';
 	import { getToday, getMonthId } from '$lib/utils/dates';
 	import { getMonth } from '$lib/db/months';
@@ -36,7 +37,7 @@
 	<div class="empty-state">
 		<h2>Bienvenido</h2>
 		<p>Primero necesitas configurar el mes actual.</p>
-		<a class="btn btn-primary mt-4" href="/month/{today.split('-')[0]}/{today.split('-')[1]}">
+		<a class="btn btn-primary mt-4" href="{base}/month/{today.split('-')[0]}/{today.split('-')[1]}">
 			Configurar mes
 		</a>
 	</div>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { base } from '$app/paths';
 
 	const tabs = [
 		{ href: '/', label: 'Hoy', icon: '📅' },
@@ -17,7 +18,7 @@
 <nav class="nav" aria-label="Navegación principal">
 	{#each tabs as tab}
 		<a
-			href={tab.href}
+			href={base + tab.href}
 			class="nav-tab"
 			class:active={isActive(tab.href, $page.url.pathname)}
 			aria-label={tab.label}
