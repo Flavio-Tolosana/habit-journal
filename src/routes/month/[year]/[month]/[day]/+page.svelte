@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import DayView from '$lib/components/DayView.svelte';
 	import { getMonth } from '$lib/db/months';
 	import { getHabitsForMonth } from '$lib/db/habits';
@@ -42,7 +43,7 @@
 	});
 
 	function goBack() {
-		goto(`/month/${data.year}/${data.month}`);
+		goto(`${base}/month/${data.year}/${data.month}`);
 	}
 
 	async function handleDelete() {

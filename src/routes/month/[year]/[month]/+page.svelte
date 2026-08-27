@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import MonthSetup from '$lib/components/MonthSetup.svelte';
 	import MonthCalendar from '$lib/components/MonthCalendar.svelte';
 	import { getMonth, getAllMonths } from '$lib/db/months';
@@ -49,7 +50,7 @@
 
 	function handleDayClick(date: string) {
 		const [, m, d] = date.split('-');
-		goto(`/month/${year}/${parseInt(m)}/${parseInt(d)}`);
+		goto(`${base}/month/${year}/${parseInt(m)}/${parseInt(d)}`);
 	}
 
 	function handleSetupComplete() {
