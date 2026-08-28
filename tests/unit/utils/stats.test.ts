@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { completionRate, chartDataForMonth } from '../../../src/lib/utils/stats';
+import {
+	completionRate,
+	chartDataForMonth,
+	monthCountsData
+} from '../../../src/lib/utils/stats';
 
 describe('completionRate', () => {
   it('returns 0% completion with no entries', () => {
@@ -103,5 +107,32 @@ describe('chartDataForMonth', () => {
 
     expect(result.labels).toEqual(['2026-08-31', '2026-09-01', '2026-09-02']);
     expect(result.datasets).toEqual([{ label: 'Exercise', data: [1, 1, 0] }]);
+  });
+});
+
+describe('monthCountsData', () => {
+  it('builds a full month of day labels with completed habit counts', () => {
+    const habitIds = ['h1', 'h2', 'h3'];
+    const entriesByDate = new Map([
+      ['2026-08-01', { date: '2026-08-01', completions: { h1: true, h2: true, h3: false } }],
+      ['2026-08-03', { date: '2026-08-03', completions: { h1: true } }],
+    ]);
+
+    const result = monthCountsData(2026, 8, 31, habitIds, entriesByDate);
+
+    expect(result.labels).toHaveLength(31);
+    expect(result.labels[0]).toBe('1');
+    expect(result.labels[30]).toBe('31');
+    expect(result.datasets).toHaveLength(1);
+    expect(result.datasets[0].data).toHaveLength(31);
+    expect(result.datasets[0].data[0]).toBe(2);
+    expect(result.datasets[0].data[1]).toBe(0);
+    expect(result.datasets[0].data[2]).toBe(1);
+  });
+
+  it('handles an empty month map with all zeros', () => {
+    const result = monthCountsData(2026, 2, 28, ['h1'], new Map());
+    expect(result.labels).toHaveLength(28);
+    expect(result.datasets[0].data.every((v) => v === 0)).toBe(true);
   });
 });

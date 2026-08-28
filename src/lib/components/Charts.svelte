@@ -6,10 +6,12 @@
 
 	let {
 		data,
-		ariaLabel = 'Habit completion chart'
+		ariaLabel = 'Habit completion chart',
+		type = 'bar'
 	}: {
 		data: { labels: string[]; datasets: Array<{ label: string; data: number[] }> };
 		ariaLabel?: string;
+		type?: 'bar' | 'line';
 	} = $props();
 
 	let canvas: HTMLCanvasElement;
@@ -26,13 +28,13 @@
 
 	onMount(() => {
 		chart = new Chart(canvas, {
-			type: 'bar',
+			type,
 			data: cloneData(data),
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
-				plugins: { legend: { position: 'bottom' } },
-				scales: { y: { beginAtZero: true, max: 1, ticks: { stepSize: 1 } } }
+				plugins: { legend: { display: false } },
+				scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
 			}
 		});
 	});
