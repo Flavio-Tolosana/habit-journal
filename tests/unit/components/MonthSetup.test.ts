@@ -32,7 +32,7 @@ beforeEach(() => {
 });
 
 describe('MonthSetup autocomplete', () => {
-	it('suggests existing habits from the collection as the user types', async () => {
+	it('suggests existing habits from the collection when the field is focused', async () => {
 		mockGetAllHabits.mockResolvedValue([
 			{ id: 'meditar', name: 'Meditar' },
 			{ id: 'leer', name: 'Leer' }
@@ -40,11 +40,35 @@ describe('MonthSetup autocomplete', () => {
 
 		render(MonthSetup, baseProps());
 
+		const input = await screen.findByPlaceholderText('Nombre del hábito');
+		await fireEvent.focus(input);
+
 		await waitFor(() => {
-			const options = Array.from(
-				document.querySelectorAll('#habit-suggestions option')
-			).map((o) => o.getAttribute('value'));
-			expect(options).toEqual(expect.arrayContaining(['Meditar', 'Leer']));
+			const options = document.querySelectorAll('.dropdown-option');
+			expect(Array.from(options).map((o) => o.textContent)).toEqual(
+				expect.arrayContaining(['Meditar', 'Leer'])
+			);
+		});
+	});
+
+	it('selects a habit from the dropdown when an option is chosen', async () => {
+		mockGetAllHabits.mockResolvedValue([
+			{ id: 'meditar', name: 'Meditar' },
+			{ id: 'leer', name: 'Leer' }
+		]);
+
+		render(MonthSetup, baseProps());
+
+		const input = (await screen.findByPlaceholderText(
+			'Nombre del hábito'
+		)) as HTMLInputElement;
+
+		await fireEvent.focus(input);
+		await fireEvent.mouseDown(document.querySelectorAll('.dropdown-option')[1]);
+
+		await waitFor(() => {
+			expect(input.value).toBe('Leer');
+			expect(screen.getByText('Se reutilizará el hábito «Leer» de la colección')).toBeTruthy();
 		});
 	});
 

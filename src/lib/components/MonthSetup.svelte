@@ -17,8 +17,13 @@
 		onSetup: () => void;
 	} = $props();
 
+	type HabitRow = {
+		name: string;
+		open: boolean;
+	};
+
 	let mantra = $state('');
-	let habits = $state<Array<{ name: string }>>([{ name: '' }]);
+	let habits = $state<HabitRow[]>([{ name: '', open: false }]);
 	let copyFromPrevious = $state(false);
 	let error = $state('');
 	let submitting = $state(false);
@@ -35,16 +40,16 @@
 			mantra = previousMonthMantra;
 			habits =
 				previousMonthHabits.length > 0
-					? previousMonthHabits.map((h) => ({ name: h.name }))
-					: [{ name: '' }];
+					? previousMonthHabits.map((h) => ({ name: h.name, open: false }))
+					: [{ name: '', open: false }];
 		} else {
 			mantra = '';
-			habits = [{ name: '' }];
+			habits = [{ name: '', open: false }];
 		}
 	});
 
 	function addHabit() {
-		habits = [...habits, { name: '' }];
+		habits = [...habits, { name: '', open: false }];
 	}
 
 	function removeHabit(index: number) {
@@ -63,8 +68,33 @@
 
 	function updateHabitName(index: number, name: string) {
 		const newHabits = [...habits];
-		newHabits[index] = { name };
+		newHabits[index] = { ...newHabits[index], name };
 		habits = newHabits;
+	}
+
+	function openDropdown(index: number) {
+		const newHabits = [...habits];
+		newHabits[index] = { ...newHabits[index], open: true };
+		habits = newHabits;
+	}
+
+	function closeDropdown(index: number) {
+		const newHabits = [...habits];
+		newHabits[index] = { ...newHabits[index], open: false };
+		habits = newHabits;
+	}
+
+	function selectHabit(index: number, name: string) {
+		updateHabitName(index, name);
+		closeDropdown(index);
+	}
+
+	function getFilteredHabits(name: string): Habit[] {
+		const trimmed = name.trim().toLowerCase();
+		if (!trimmed) {
+			return allHabits;
+		}
+		return allHabits.filter((h) => h.name.toLowerCase().includes(trimmed));
 	}
 
 	function getHabitHint(name: string): string {
@@ -144,60 +174,81 @@
 				<span class="habit-count badge">{validHabitsCount}</span>
 			</div>
 
-			<datalist id="habit-suggestions">
-				{#each allHabits as habit (habit.id)}
-					<option value={habit.name}></option>
-				{/each}
-			</datalist>
-
 			<div class="habits-list">
 				{#each habits as habit, i (i)}
 					{@const hint = getHabitHint(habit.name)}
-					<div class="habit-row">
-						<span class="habit-number">{i + 1}</span>
-						<input
-							type="text"
-							class="habit-input"
-							value={habit.name}
-							oninput={(e) => updateHabitName(i, (e.target as HTMLInputElement).value)}
-							placeholder="Nombre del hábito"
-							maxlength={100}
-							list="habit-suggestions"
-							aria-describedby={hint ? `habit-hint-${i}` : undefined}
-						/>
-						<div class="habit-actions">
-							<button
-								type="button"
-								class="icon-btn"
-								onclick={() => moveHabit(i, -1)}
-								disabled={i === 0}
-								aria-label="Subir"
-							>
-								↑
-							</button>
-							<button
-								type="button"
-								class="icon-btn"
-								onclick={() => moveHabit(i, 1)}
-								disabled={i === habits.length - 1}
-								aria-label="Bajar"
-							>
-								↓
-							</button>
-							<button
-								type="button"
-								class="icon-btn danger"
-								onclick={() => removeHabit(i)}
-								disabled={habits.length === 1}
-								aria-label="Eliminar"
-							>
-								×
-							</button>
+					{@const filtered = getFilteredHabits(habit.name)}
+					<div class="habit-field">
+						<div class="habit-row">
+							<span class="habit-number">{i + 1}</span>
+							<div class="input-wrap">
+								<input
+									type="text"
+									class="habit-input"
+									value={habit.name}
+									oninput={(e) => updateHabitName(i, (e.target as HTMLInputElement).value)}
+									onfocus={() => openDropdown(i)}
+									onblur={() => { setTimeout(() => closeDropdown(i), 120); }}
+									placeholder="Nombre del hábito"
+									maxlength={100}
+									autocomplete="off"
+									aria-expanded={habit.open}
+									aria-haspopup="listbox"
+									role="combobox"
+									aria-describedby={hint ? `habit-hint-${i}` : undefined}
+								/>
+								{#if habit.open && filtered.length > 0}
+									<ul class="dropdown" role="listbox" aria-label="Hábitos existentes">
+										{#each filtered as item (item.id)}
+											<li>
+												<button
+													type="button"
+													class="dropdown-option"
+													role="option"
+													aria-selected={item.name.trim() === habit.name.trim()}
+													onmousedown={(e) => { e.preventDefault(); selectHabit(i, item.name); }}
+												>
+													{item.name}
+												</button>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+							<div class="habit-actions">
+								<button
+									type="button"
+									class="icon-btn"
+									onclick={() => moveHabit(i, -1)}
+									disabled={i === 0}
+									aria-label="Subir"
+								>
+									↑
+								</button>
+								<button
+									type="button"
+									class="icon-btn"
+									onclick={() => moveHabit(i, 1)}
+									disabled={i === habits.length - 1}
+									aria-label="Bajar"
+								>
+									↓
+								</button>
+								<button
+									type="button"
+									class="icon-btn danger"
+									onclick={() => removeHabit(i)}
+									disabled={habits.length === 1}
+									aria-label="Eliminar"
+								>
+									×
+								</button>
+							</div>
 						</div>
+						{#if hint}
+							<p class="habit-hint" id="habit-hint-{i}" aria-live="polite">{hint}</p>
+						{/if}
 					</div>
-					{#if hint}
-						<p class="habit-hint" id="habit-hint-{i}" aria-live="polite">{hint}</p>
-					{/if}
 				{/each}
 			</div>
 
@@ -322,6 +373,10 @@
 		gap: 0.5rem;
 	}
 
+	.habit-field {
+		position: relative;
+	}
+
 	.habit-row {
 		display: flex;
 		align-items: center;
@@ -336,8 +391,13 @@
 		flex-shrink: 0;
 	}
 
-	.habit-input {
+	.input-wrap {
+		position: relative;
 		flex: 1;
+	}
+
+	.habit-input {
+		width: 100%;
 		padding: 0.5rem 0.75rem;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
@@ -351,10 +411,50 @@
 		border-color: var(--color-primary);
 	}
 
+	.dropdown {
+		position: absolute;
+		top: calc(100% + 0.25rem);
+		left: 0;
+		right: 0;
+		z-index: 10;
+		list-style: none;
+		margin: 0;
+		padding: 0.25rem;
+		max-height: 12rem;
+		overflow-y: auto;
+		background: var(--color-background);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+	}
+
+	.dropdown-option {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 0.5rem 0.625rem;
+		border: none;
+		border-radius: calc(var(--radius) - 2px);
+		background: transparent;
+		color: var(--color-text);
+		font-size: 0.9375rem;
+		cursor: pointer;
+	}
+
+	.dropdown-option:hover,
+	.dropdown-option:focus {
+		background-color: var(--color-primary-light);
+		color: var(--color-primary);
+	}
+
+	.dropdown-option:focus {
+		outline: none;
+	}
+
 	.habit-hint {
 		font-size: 0.75rem;
 		color: var(--color-text-muted);
-		margin: -0.25rem 0 0.5rem;
+		margin: 0.25rem 0 0;
 		padding-left: 2rem;
 	}
 
