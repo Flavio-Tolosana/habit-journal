@@ -15,10 +15,19 @@
 	let canvas: HTMLCanvasElement;
 	let chart: Chart;
 
+	function cloneData(
+		d: { labels: string[]; datasets: Array<{ label: string; data: number[] }> }
+	): { labels: string[]; datasets: Array<{ label: string; data: number[] }> } {
+		return {
+			labels: [...d.labels],
+			datasets: d.datasets.map((set) => ({ label: set.label, data: [...set.data] }))
+		};
+	}
+
 	onMount(() => {
 		chart = new Chart(canvas, {
 			type: 'bar',
-			data,
+			data: cloneData(data),
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
@@ -32,7 +41,7 @@
 
 	$effect(() => {
 		if (chart) {
-			chart.data = data;
+			chart.data = cloneData(data);
 			chart.update();
 		}
 	});
