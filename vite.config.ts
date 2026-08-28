@@ -27,6 +27,8 @@ export default defineConfig({
 				name: 'Habit Journal',
 				short_name: 'Habits',
 				description: 'Libreta de seguimiento de hábitos mensual',
+				start_url: `${base || '/'}`,
+				scope: `${base || '/'}`,
 				theme_color: '#ffffff',
 				background_color: '#ffffff',
 				display: 'standalone',

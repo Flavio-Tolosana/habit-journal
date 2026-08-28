@@ -2,13 +2,14 @@
   "name": "Habit Journal",
   "short_name": "Habits",
   "description": "Libreta de seguimiento de hábitos mensual",
-  "start_url": "/",
+  "start_url": "/habit-journal/",
+  "scope": "/habit-journal/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" },
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/habit-journal/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/habit-journal/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/habit-journal/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
