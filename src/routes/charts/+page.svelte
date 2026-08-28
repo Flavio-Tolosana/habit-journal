@@ -61,7 +61,16 @@
 
 		<section class="card chart-section" aria-label="Completion chart">
 			<h2 class="section-title">Progreso diario</h2>
-			<Charts data={chartData} ariaLabel="Gráfica de progreso de hábitos del mes actual" />
+			{#if chartData.labels.length === 0}
+				<div class="chart-empty">
+					<p>Aún no hay registros para mostrar.</p>
+					<p class="muted-chart">
+						Marca el progreso de algún día en el calendario para que aparezcan las gráficas.
+					</p>
+				</div>
+			{:else}
+				<Charts data={chartData} ariaLabel="Gráfica de progreso de hábitos del mes actual" />
+			{/if}
 		</section>
 
 		<section class="card" aria-label="Streak summary">
@@ -159,6 +168,22 @@
 
 	.chart-section {
 		overflow: hidden;
+	}
+
+	.chart-empty {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.25rem;
+		height: 300px;
+		text-align: center;
+		color: var(--color-text-muted);
+		font-size: 0.9375rem;
+	}
+
+	.muted-chart {
+		font-size: 0.8125rem;
 	}
 
 	.streak-table {
