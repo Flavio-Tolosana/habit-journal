@@ -112,11 +112,11 @@
 	</div>
 
 	<div class="calendar-grid" role="grid" aria-label="Calendario mensual">
-		{#each dayHeaders as header}
+		{#each dayHeaders as header, di (di)}
 			<div class="day-header" role="columnheader">{header}</div>
 		{/each}
 
-		{#each calendarCells as cell, i}
+		{#each calendarCells as cell, i (cell.date || `empty-${i}`)}
 			{#if cell.day === 0}
 				<div class="day-cell empty" aria-hidden="true"></div>
 			{:else}

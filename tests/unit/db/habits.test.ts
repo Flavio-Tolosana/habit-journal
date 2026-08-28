@@ -1,21 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { HabitDefinition, Month } from '../../../src/lib/db/types';
+import type { Habit, Month, DailyEntry } from '../../../src/lib/db/types';
 
 vi.mock('../../../src/lib/db/index', () => ({
 	getDB: vi.fn()
 }));
 
 import { getDB } from '../../../src/lib/db/index';
-import { getHabitsForMonth, createHabitsForMonth } from '../../../src/lib/db/habits';
+import {
+	getAllHabits,
+	getHabitById,
+	findHabitByName,
+	createHabit,
+	getOrCreateHabit,
+	getHabitReferenceCount,
+	renameHabit,
+	deleteHabit,
+	getHabitsForMonth
+} from '../../../src/lib/db/habits';
 
 const mockGetDB = vi.mocked(getDB);
 
-function makeHabit(overrides: Partial<HabitDefinition> = {}): HabitDefinition {
+function makeHabit(overrides: Partial<Habit> = {}): Habit {
 	return {
-		id: 'habit-1',
-		monthId: '2026-08',
-		name: 'Exercise',
-		order: 0,
+		id: 'meditar',
+		name: 'Meditar',
 		...overrides
 	};
 }
@@ -25,52 +33,48 @@ function makeMonth(overrides: Partial<Month> = {}): Month {
 		id: '2026-08',
 		year: 2026,
 		month: 8,
-		mantra: 'Stay consistent',
-		habits: [],
+		mantra: 'En la cresta de la ola',
+		memberships: [],
 		setupComplete: true,
 		...overrides
 	};
 }
 
-function mockDB(storeData: Record<string, Record<string, unknown>> = {}) {
-	const stores: Record<string, Record<string, unknown>> = {
-		months: storeData.months ?? {},
-		habits: storeData.habits ?? {},
-		entries: storeData.entries ?? {}
+function makeEntry(overrides: Partial<DailyEntry> = {}): DailyEntry {
+	return {
+		date: '2026-08-15',
+		monthId: '2026-08',
+		journalText: '',
+		completions: {},
+		...overrides
 	};
+}
 
-	const indexes: Record<string, Record<string, Record<string, unknown>>> = {
-		'habits:by-month': {},
-		'entries:by-month': {}
+function mockDB(initial?: {
+	months?: Record<string, Month>;
+	habits?: Record<string, Habit>;
+	entries?: Record<string, DailyEntry>;
+}) {
+	const stores: Record<string, Map<string, unknown>> = {
+		months: new Map(Object.entries(initial?.months ?? {})),
+		habits: new Map(Object.entries(initial?.habits ?? {})),
+		entries: new Map(Object.entries(initial?.entries ?? {}))
 	};
-
-	for (const habit of Object.values(stores.habits) as HabitDefinition[]) {
-		const monthId = habit.monthId;
-		if (!indexes['habits:by-month'][monthId]) {
-			indexes['habits:by-month'][monthId] = {};
-		}
-		indexes['habits:by-month'][monthId][habit.id] = habit;
-	}
-
-	const addedHabits: HabitDefinition[] = [];
 
 	return {
-		get: vi.fn(async (store: string, key: string) => stores[store]?.[key]),
-		getAllFromIndex: vi.fn(async (store: string, indexName: string, key: string) => {
-			const indexKey = `${store}:${indexName}`;
-			return Object.values(indexes[indexKey]?.[key] ?? {});
+		get: vi.fn(async (store: string, key: string) => stores[store]?.get(key)),
+		getAll: vi.fn(async (store: string) => Array.from(stores[store]?.values() ?? [])),
+		put: vi.fn(async (store: string, value: { id: string }) => {
+			stores[store].set(value.id, value);
 		}),
-		transaction: vi.fn((storeName: string, _mode: string) => {
-			return {
-				store: {
-					add: vi.fn(async (value: unknown) => {
-						addedHabits.push(value as HabitDefinition);
-					})
-				},
-				done: Promise.resolve()
-			};
+		add: vi.fn(async (store: string, value: { id: string }) => {
+			if (stores[store].has(value.id)) throw new Error('ConstraintError');
+			stores[store].set(value.id, value);
 		}),
-		addedHabits
+		delete: vi.fn(async (store: string, key: string) => {
+			stores[store].delete(key);
+		}),
+		stores
 	};
 }
 
@@ -78,24 +82,277 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
-describe('getHabitsForMonth', () => {
-	it('returns habits sorted by order', async () => {
-		const h2 = makeHabit({ id: 'habit-2', name: 'Meditate', order: 2 });
-		const h0 = makeHabit({ id: 'habit-0', name: 'Exercise', order: 0 });
-		const h1 = makeHabit({ id: 'habit-1', name: 'Read', order: 1 });
+describe('getAllHabits', () => {
+	it('returns habits sorted by name', async () => {
+		const meditar = makeHabit({ id: 'meditar', name: 'Meditar' });
+		const leer = makeHabit({ id: 'leer', name: 'Leer' });
+		const correr = makeHabit({ id: 'correr', name: 'Correr' });
+		const db = mockDB({ habits: { meditar, leer, correr } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await getAllHabits();
+
+		expect(result.map((h) => h.name)).toEqual(['Correr', 'Leer', 'Meditar']);
+	});
+
+	it('returns an empty array when the collection is empty', async () => {
+		const db = mockDB({ habits: {} });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await getAllHabits();
+
+		expect(result).toEqual([]);
+	});
+});
+
+describe('getHabitById', () => {
+	it('returns the habit when it exists', async () => {
+		const habit = makeHabit();
+		const db = mockDB({ habits: { meditar: habit } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await getHabitById('meditar');
+
+		expect(result).toEqual(habit);
+	});
+
+	it('returns undefined when it does not exist', async () => {
+		const db = mockDB({ habits: {} });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await getHabitById('inexistente');
+
+		expect(result).toBeUndefined();
+	});
+});
+
+describe('findHabitByName', () => {
+	it('finds a habit by exact name after trimming', async () => {
+		const habit = makeHabit({ id: 'leer', name: 'Leer' });
+		const db = mockDB({ habits: { leer: habit } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await findHabitByName('  Leer  ');
+
+		expect(result).toEqual(habit);
+	});
+
+	it('is case-sensitive', async () => {
+		const habit = makeHabit({ id: 'leer', name: 'Leer' });
+		const db = mockDB({ habits: { leer: habit } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await findHabitByName('leer');
+
+		expect(result).toBeUndefined();
+	});
+
+	it('returns undefined for an empty/whitespace name', async () => {
+		const db = mockDB({ habits: {} });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await findHabitByName('   ');
+
+		expect(result).toBeUndefined();
+	});
+});
+
+describe('createHabit', () => {
+	it('creates a habit deriving the slug from the name', async () => {
+		const db = mockDB({ habits: {} });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await createHabit('  Meditar  ');
+
+		expect(result).toEqual({ id: 'meditar', name: 'Meditar' });
+		expect(db.put).toHaveBeenCalledWith('habits', { id: 'meditar', name: 'Meditar' });
+	});
+
+	it('throws when the name is empty after trimming', async () => {
+		const db = mockDB({ habits: {} });
+		mockGetDB.mockResolvedValue(db as never);
+
+		await expect(createHabit('   ')).rejects.toThrow(
+			'El nombre del hábito debe tener entre 1 y 100 caracteres'
+		);
+	});
+
+	it('throws when the name is longer than 100 characters', async () => {
+		const db = mockDB({ habits: {} });
+		mockGetDB.mockResolvedValue(db as never);
+
+		await expect(createHabit('a'.repeat(101))).rejects.toThrow(
+			'El nombre del hábito debe tener entre 1 y 100 caracteres'
+		);
+	});
+
+	it('throws when the slug is empty', async () => {
+		const db = mockDB({ habits: {} });
+		mockGetDB.mockResolvedValue(db as never);
+
+		await expect(createHabit('!!!')).rejects.toThrow('Nombre de hábito no válido');
+	});
+
+	it('throws when a habit with the same slug already exists', async () => {
+		const existing = makeHabit({ id: 'meditar', name: 'Meditar' });
+		const db = mockDB({ habits: { meditar: existing } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		await expect(createHabit('meditar')).rejects.toThrow(
+			'Ya existe un hábito llamado "Meditar"'
+		);
+	});
+});
+
+describe('getOrCreateHabit', () => {
+	it('returns the existing habit when the name matches exactly', async () => {
+		const existing = makeHabit({ id: 'leer', name: 'Leer' });
+		const db = mockDB({ habits: { leer: existing } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await getOrCreateHabit('Leer');
+
+		expect(result).toBe(existing);
+		expect(db.put).not.toHaveBeenCalled();
+	});
+
+	it('creates the habit when it does not exist', async () => {
+		const db = mockDB({ habits: {} });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await getOrCreateHabit('Correr');
+
+		expect(result).toEqual({ id: 'correr', name: 'Correr' });
+	});
+});
+
+describe('getHabitReferenceCount', () => {
+	it('counts months that include the habit in memberships plus entries that reference it', async () => {
+		const month1 = makeMonth({
+			id: '2026-07',
+			year: 2026,
+			month: 7,
+			memberships: [{ habitId: 'leer', order: 0 }]
+		});
+		const month2 = makeMonth({
+			id: '2026-08',
+			year: 2026,
+			month: 8,
+			memberships: [{ habitId: 'leer', order: 0 }, { habitId: 'meditar', order: 1 }]
+		});
+		const entry1 = makeEntry({ date: '2026-08-01', completions: { leer: true } });
+		const entry2 = makeEntry({
+			date: '2026-08-02',
+			completions: { leer: true, meditar: false }
+		});
 		const db = mockDB({
-			habits: { 'habit-0': h0, 'habit-1': h1, 'habit-2': h2 }
+			months: { '2026-07': month1, '2026-08': month2 },
+			entries: { '2026-08-01': entry1, '2026-08-02': entry2 }
+		});
+		mockGetDB.mockResolvedValue(db as never);
+
+		const leerRefs = await getHabitReferenceCount('leer');
+		const meditarRefs = await getHabitReferenceCount('meditar');
+
+		expect(leerRefs).toBe(4);
+		expect(meditarRefs).toBe(2);
+	});
+
+	it('returns 0 when the habit is not referenced', async () => {
+		const db = mockDB({});
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await getHabitReferenceCount('solitario');
+
+		expect(result).toBe(0);
+	});
+});
+
+describe('renameHabit', () => {
+	it('renames an unreferenced habit creating a new identity', async () => {
+		const habit = makeHabit({ id: 'tipo', name: 'Tipo' });
+		const db = mockDB({ habits: { tipo: habit } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		const result = await renameHabit('tipo', 'Corregido');
+
+		expect(result).toEqual({ id: 'corregido', name: 'Corregido' });
+		expect(db.delete).toHaveBeenCalledWith('habits', 'tipo');
+		expect(db.put).toHaveBeenCalledWith('habits', { id: 'corregido', name: 'Corregido' });
+	});
+
+	it('throws when the habit is referenced', async () => {
+		const habit = makeHabit({ id: 'leer', name: 'Leer' });
+		const month = makeMonth({ memberships: [{ habitId: 'leer', order: 0 }] });
+		const db = mockDB({ habits: { leer: habit }, months: { '2026-08': month } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		await expect(renameHabit('leer', 'Lectura')).rejects.toThrow(
+			'No se puede renombrar un hábito que ya está en uso'
+		);
+	});
+
+	it('throws when the new name collides with an existing slug', async () => {
+		const original = makeHabit({ id: 'correr', name: 'Correr' });
+		const clash = makeHabit({ id: 'leer', name: 'Leer' });
+		const db = mockDB({ habits: { correr: original, leer: clash } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		await expect(renameHabit('correr', 'Leer')).rejects.toThrow(
+			'Ya existe un hábito llamado "Leer"'
+		);
+	});
+});
+
+describe('deleteHabit', () => {
+	it('deletes an unreferenced habit', async () => {
+		const habit = makeHabit({ id: 'solitario', name: 'Solitario' });
+		const db = mockDB({ habits: { solitario: habit } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		await deleteHabit('solitario');
+
+		expect(db.delete).toHaveBeenCalledWith('habits', 'solitario');
+	});
+
+	it('throws when the habit is referenced', async () => {
+		const habit = makeHabit({ id: 'leer', name: 'Leer' });
+		const entry = makeEntry({ completions: { leer: true } });
+		const db = mockDB({ habits: { leer: habit }, entries: { '2026-08-15': entry } });
+		mockGetDB.mockResolvedValue(db as never);
+
+		await expect(deleteHabit('leer')).rejects.toThrow(
+			'No se puede eliminar un hábito que está en uso'
+		);
+	});
+});
+
+describe('getHabitsForMonth', () => {
+	it('resolves memberships to habits ordered by order', async () => {
+		const month = makeMonth({
+			memberships: [
+				{ habitId: 'meditar', order: 1 },
+				{ habitId: 'leer', order: 0 }
+			]
+		});
+		const leer = makeHabit({ id: 'leer', name: 'Leer' });
+		const meditar = makeHabit({ id: 'meditar', name: 'Meditar' });
+		const db = mockDB({
+			months: { '2026-08': month },
+			habits: { leer, meditar }
 		});
 		mockGetDB.mockResolvedValue(db as never);
 
 		const result = await getHabitsForMonth('2026-08');
 
-		expect(result.map((h) => h.id)).toEqual(['habit-0', 'habit-1', 'habit-2']);
-		expect(db.getAllFromIndex).toHaveBeenCalledWith('habits', 'by-month', '2026-08');
+		expect(result).toEqual([
+			{ id: 'leer', name: 'Leer', order: 0 },
+			{ id: 'meditar', name: 'Meditar', order: 1 }
+		]);
 	});
 
-	it('returns an empty array when no habits exist for the month', async () => {
-		const db = mockDB({ habits: {} });
+	it('returns an empty array when the month does not exist', async () => {
+		const db = mockDB({ months: {} });
 		mockGetDB.mockResolvedValue(db as never);
 
 		const result = await getHabitsForMonth('2026-99');
@@ -103,45 +360,19 @@ describe('getHabitsForMonth', () => {
 		expect(result).toEqual([]);
 	});
 
-	it('returns only habits for the specified month', async () => {
-		const hAug = makeHabit({ id: 'habit-a', monthId: '2026-08', order: 0 });
-		const hSep = makeHabit({ id: 'habit-b', monthId: '2026-09', order: 0 });
-		const db = mockDB({
-			habits: { 'habit-a': hAug, 'habit-b': hSep }
+	it('skips memberships whose habit is no longer in the collection', async () => {
+		const month = makeMonth({
+			memberships: [
+				{ habitId: 'leer', order: 0 },
+				{ habitId: 'desaparecido', order: 1 }
+			]
 		});
+		const leer = makeHabit({ id: 'leer', name: 'Leer' });
+		const db = mockDB({ months: { '2026-08': month }, habits: { leer } });
 		mockGetDB.mockResolvedValue(db as never);
 
 		const result = await getHabitsForMonth('2026-08');
 
-		expect(result).toHaveLength(1);
-		expect(result[0].id).toBe('habit-a');
-	});
-});
-
-describe('createHabitsForMonth', () => {
-	it('creates habits inside a transaction', async () => {
-		const month = makeMonth();
-		const habits = [
-			makeHabit({ id: 'habit-1', order: 0 }),
-			makeHabit({ id: 'habit-2', name: 'Read', order: 1 })
-		];
-		const db = mockDB({ months: { '2026-08': month } });
-		mockGetDB.mockResolvedValue(db as never);
-
-		await createHabitsForMonth('2026-08', habits);
-
-		expect(db.transaction).toHaveBeenCalledWith('habits', 'readwrite');
-		expect(db.addedHabits).toHaveLength(2);
-	});
-
-	it('throws when the month does not exist', async () => {
-		const db = mockDB({ months: {} });
-		mockGetDB.mockResolvedValue(db as never);
-
-		const habits = [makeHabit()];
-
-		await expect(createHabitsForMonth('2026-99', habits)).rejects.toThrow(
-			'Month 2026-99 not found'
-		);
+		expect(result).toEqual([{ id: 'leer', name: 'Leer', order: 0 }]);
 	});
 });

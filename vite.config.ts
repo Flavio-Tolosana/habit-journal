@@ -18,7 +18,7 @@ export default defineConfig({
 				fallback: 'index.html'
 			}),
 			paths: {
-				base: base || undefined
+				base: (base || undefined) as `/${string}` | undefined
 			}
 		}),
 		VitePWA({

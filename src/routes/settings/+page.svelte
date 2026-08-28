@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import ExportImport from '$lib/components/ExportImport.svelte';
 	import { getAllMonths } from '$lib/db/months';
 	import { getDB } from '$lib/db/index';
@@ -25,6 +26,14 @@
 
 <div class="settings-page">
 	<h1 class="page-title">Ajustes</h1>
+
+	<section class="card" aria-label="Habit management">
+		<h2 class="section-title">Guarda de hábitos</h2>
+		<p class="section-desc">
+			Revisa tu colección de hábitos: renombra o elimina los que no estén en uso.
+		</p>
+		<a class="btn btn-outline" href="{base}/habits">Gestionar hábitos</a>
+	</section>
 
 	<section class="card" aria-label="Export and import">
 		<h2 class="section-title">Exportar / Importar datos</h2>

@@ -7,10 +7,9 @@
 	import { getMonth, getAllMonths } from '$lib/db/months';
 	import { getHabitsForMonth } from '$lib/db/habits';
 	import { getEntriesForMonth } from '$lib/db/entries';
-	import type { Month, HabitDefinition, DailyEntry } from '$lib/db/types';
+	import type { Month, DailyEntry } from '$lib/db/types';
 
 	let monthData = $state<Month | undefined>(undefined);
-	let habits = $state<HabitDefinition[]>([]);
 	let entries = $state<DailyEntry[]>([]);
 	let previousMonth = $state<Month | undefined>(undefined);
 	let previousHabits = $state<Array<{ name: string }>>([]);
@@ -25,7 +24,6 @@
 		monthData = await getMonth(monthId);
 
 		if (monthData) {
-			habits = await getHabitsForMonth(monthId);
 			entries = await getEntriesForMonth(monthId);
 		}
 

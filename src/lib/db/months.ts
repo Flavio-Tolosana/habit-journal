@@ -1,5 +1,6 @@
 import { getDB } from './index';
-import type { Month } from './types';
+import type { Month, MonthMembership } from './types';
+import { getOrCreateHabit } from './habits';
 
 export async function getMonth(id: string): Promise<Month | undefined> {
 	const db = await getDB();
@@ -19,13 +20,35 @@ export async function getAllMonths(): Promise<Month[]> {
 	return all.sort((a, b) => b.id.localeCompare(a.id));
 }
 
-export async function createMonth(input: Month): Promise<void> {
+export async function createMonth(input: {
+	id: string;
+	year: number;
+	month: number;
+	mantra?: string;
+	members: Array<{ name: string; order: number }>;
+}): Promise<Month> {
 	const db = await getDB();
 	const existing = await db.get('months', input.id);
 	if (existing) {
 		throw new Error(`Month ${input.id} already exists`);
 	}
-	await db.add('months', input);
+	const memberships: MonthMembership[] = [];
+	for (const member of input.members) {
+		const habit = await getOrCreateHabit(member.name);
+		if (!memberships.some((m) => m.habitId === habit.id)) {
+			memberships.push({ habitId: habit.id, order: member.order });
+		}
+	}
+	const month: Month = {
+		id: input.id,
+		year: input.year,
+		month: input.month,
+		mantra: input.mantra ?? '',
+		memberships,
+		setupComplete: true
+	};
+	await db.add('months', month);
+	return month;
 }
 
 export async function updateMantra(id: string, mantra: string): Promise<void> {

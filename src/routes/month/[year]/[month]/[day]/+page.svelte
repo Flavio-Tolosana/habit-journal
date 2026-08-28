@@ -3,14 +3,14 @@
 	import { base } from '$app/paths';
 	import DayView from '$lib/components/DayView.svelte';
 	import { getMonth } from '$lib/db/months';
-	import { getHabitsForMonth } from '$lib/db/habits';
+	import { getHabitsForMonth, type MonthHabit } from '$lib/db/habits';
 	import { getEntry, deleteEntry } from '$lib/db/entries';
-	import type { Month, HabitDefinition, DailyEntry } from '$lib/db/types';
+	import type { Month, DailyEntry } from '$lib/db/types';
 
 	let { data } = $props();
 
 	let monthData = $state<Month | undefined>(undefined);
-	let habits = $state<HabitDefinition[]>([]);
+	let habits = $state<MonthHabit[]>([]);
 	let entry = $state<DailyEntry | undefined>(undefined);
 	let loaded = $state(false);
 	let showDeleteConfirm = $state(false);

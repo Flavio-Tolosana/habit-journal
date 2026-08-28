@@ -16,7 +16,7 @@
 </script>
 
 <nav class="nav" aria-label="Navegación principal">
-	{#each tabs as tab}
+	{#each tabs as tab (tab.href)}
 		<a
 			href={base + tab.href}
 			class="nav-tab"

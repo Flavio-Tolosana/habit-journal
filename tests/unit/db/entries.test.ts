@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { DailyEntry, HabitDefinition, Month } from '../../../src/lib/db/types';
+import type { DailyEntry, Month } from '../../../src/lib/db/types';
 
 vi.mock('../../../src/lib/db/index', () => ({
 	getDB: vi.fn()
@@ -33,18 +33,8 @@ function makeMonth(overrides: Partial<Month> = {}): Month {
 		year: 2026,
 		month: 8,
 		mantra: 'Stay consistent',
-		habits: [],
+		memberships: [],
 		setupComplete: true,
-		...overrides
-	};
-}
-
-function makeHabit(overrides: Partial<HabitDefinition> = {}): HabitDefinition {
-	return {
-		id: 'habit-1',
-		monthId: '2026-08',
-		name: 'Exercise',
-		order: 0,
 		...overrides
 	};
 }
@@ -66,16 +56,6 @@ function mockDB(storeData: Record<string, Record<string, unknown>> = {}) {
 		return index;
 	}
 
-	function rebuildHabitIndex() {
-		const index: Record<string, Record<string, unknown>> = {};
-		for (const habit of Object.values(stores.habits) as HabitDefinition[]) {
-			const monthId = habit.monthId;
-			if (!index[monthId]) index[monthId] = {};
-			index[monthId][habit.id] = habit;
-		}
-		return index;
-	}
-
 	return {
 		get: vi.fn(async (store: string, key: string) => stores[store]?.[key]),
 		put: vi.fn(async (store: string, value: unknown) => {
@@ -90,9 +70,6 @@ function mockDB(storeData: Record<string, Record<string, unknown>> = {}) {
 				if (store === 'entries' && indexName === 'by-month') {
 					return Object.values(rebuildEntryIndex()[key] ?? {});
 				}
-				if (store === 'habits' && indexName === 'by-month') {
-					return Object.values(rebuildHabitIndex()[key] ?? {});
-				}
 				return [];
 			}
 		),
@@ -101,7 +78,12 @@ function mockDB(storeData: Record<string, Record<string, unknown>> = {}) {
 				store: {
 					delete: vi.fn(async (key: string) => {
 						delete stores[storeName][key];
-					})
+					}),
+					index: vi.fn(() => ({
+						getAll: vi.fn(
+							async (key: string) => Object.values(rebuildEntryIndex()[key] ?? {})
+						)
+					}))
 				},
 				done: Promise.resolve()
 			};
@@ -265,16 +247,14 @@ describe('deleteEntry', () => {
 });
 
 describe('deleteMonth', () => {
-	it('deletes the month, all its habits, and all its entries', async () => {
+	it('deletes the month and all its entries', async () => {
 		const month = makeMonth();
-		const habit1 = makeHabit({ id: 'h1' });
-		const habit2 = makeHabit({ id: 'h2', name: 'Read', order: 1 });
 		const entry1 = makeEntry({ date: '2026-08-01' });
 		const entry2 = makeEntry({ date: '2026-08-15' });
 
 		const db = mockDB({
 			months: { '2026-08': month },
-			habits: { h1: habit1, h2: habit2 },
+			habits: {},
 			entries: { '2026-08-01': entry1, '2026-08-15': entry2 }
 		});
 		mockGetDB.mockResolvedValue(db as never);
@@ -282,11 +262,10 @@ describe('deleteMonth', () => {
 		await deleteMonth('2026-08');
 
 		expect(db.delete).toHaveBeenCalledWith('months', '2026-08');
-		expect(db.transaction).toHaveBeenCalledWith('habits', 'readwrite');
 		expect(db.transaction).toHaveBeenCalledWith('entries', 'readwrite');
 	});
 
-	it('deletes the month even when it has no habits or entries', async () => {
+	it('deletes the month even when it has no entries', async () => {
 		const month = makeMonth();
 		const db = mockDB({
 			months: { '2026-08': month },

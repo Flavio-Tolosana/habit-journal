@@ -12,6 +12,12 @@ export async function getEntriesForMonth(monthId: string): Promise<DailyEntry[]>
 	return all.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+export async function getAllEntries(): Promise<DailyEntry[]> {
+	const db = await getDB();
+	const all = await db.getAll('entries');
+	return all.sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export async function setHabitCompletion(
 	date: string,
 	habitId: string,
@@ -47,17 +53,10 @@ export async function deleteMonth(monthId: string): Promise<void> {
 	const db = await getDB();
 	await db.delete('months', monthId);
 
-	const habits = await db.getAllFromIndex('habits', 'by-month', monthId);
-	const habitTx = db.transaction('habits', 'readwrite');
-	for (const habit of habits) {
-		await habitTx.store.delete(habit.id);
+	const tx = db.transaction('entries', 'readwrite');
+	const all = await tx.store.index('by-month').getAll(monthId);
+	for (const entry of all) {
+		await tx.store.delete(entry.date);
 	}
-	await habitTx.done;
-
-	const entries = await db.getAllFromIndex('entries', 'by-month', monthId);
-	const entryTx = db.transaction('entries', 'readwrite');
-	for (const entry of entries) {
-		await entryTx.store.delete(entry.date);
-	}
-	await entryTx.done;
+	await tx.done;
 }

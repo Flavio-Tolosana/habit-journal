@@ -1,13 +1,20 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { setJournalText } from '$lib/db/entries';
 
 	let {
 		date,
 		initialText = ''
 	}: { date: string; initialText?: string } = $props();
-	let text = $state(initialText);
+	let text = $state('');
 	let charCount = $derived(text.length);
 	let saveTimeout: ReturnType<typeof setTimeout>;
+
+	function seed() {
+		text = initialText;
+	}
+
+	onMount(seed);
 
 	function handleInput() {
 		clearTimeout(saveTimeout);

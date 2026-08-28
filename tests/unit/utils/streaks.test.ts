@@ -94,7 +94,7 @@ describe('calculateStreaks', () => {
     vi.setSystemTime(new Date('2026-08-26T12:00:00'));
 
     const habits = [{ id: 'h1' }, { id: 'h2' }, { id: 'h3' }];
-    const entries = [
+    const entries: Array<{ date: string; completions: Record<string, boolean> }> = [
       { date: '2026-08-24', completions: { h1: true, h2: true } },
       { date: '2026-08-25', completions: { h1: true, h2: true } },
       { date: '2026-08-26', completions: { h1: true } },
@@ -104,5 +104,37 @@ describe('calculateStreaks', () => {
     expect(result.get('h1')).toEqual({ current: 3, longest: 3 });
     expect(result.get('h2')).toEqual({ current: 2, longest: 2 });
     expect(result.get('h3')).toEqual({ current: 0, longest: 0 });
+  });
+
+  it('counts a streak that crosses a month boundary as continuous', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-02T12:00:00'));
+
+    const habits = [{ id: 'h1' }];
+    const entries = [
+      { date: '2026-08-30', completions: { h1: true } },
+      { date: '2026-08-31', completions: { h1: true } },
+      { date: '2026-09-01', completions: { h1: true } },
+      { date: '2026-09-02', completions: { h1: true } },
+    ];
+
+    const result = calculateStreaks(habits, entries);
+    expect(result.get('h1')).toEqual({ current: 4, longest: 4 });
+  });
+
+  it('keeps a broken streak separated when the habit is repeated months later', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-03T12:00:00'));
+
+    const habits = [{ id: 'h1' }];
+    const entries = [
+      { date: '2026-08-01', completions: { h1: true } },
+      { date: '2026-08-02', completions: { h1: true } },
+      { date: '2026-09-01', completions: { h1: true } },
+      { date: '2026-09-02', completions: { h1: true } },
+    ];
+
+    const result = calculateStreaks(habits, entries);
+    expect(result.get('h1')).toEqual({ current: 2, longest: 2 });
   });
 });

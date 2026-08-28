@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createMonth } from '$lib/db/months';
-	import { createHabitsForMonth } from '$lib/db/habits';
+	import { getAllHabits } from '$lib/db/habits';
+	import type { Habit } from '$lib/db/types';
 
 	let {
 		year,
@@ -21,6 +22,13 @@
 	let copyFromPrevious = $state(false);
 	let error = $state('');
 	let submitting = $state(false);
+	let allHabits = $state<Habit[]>([]);
+
+	$effect(() => {
+		void getAllHabits().then((h) => {
+			allHabits = h;
+		});
+	});
 
 	$effect(() => {
 		if (copyFromPrevious) {
@@ -59,6 +67,14 @@
 		habits = newHabits;
 	}
 
+	function getHabitHint(name: string): string {
+		const trimmed = name.trim();
+		if (!trimmed) return '';
+		const match = allHabits.find((h) => h.name.trim() === trimmed);
+		if (match) return `Se reutilizará el hábito «${match.name}» de la colección`;
+		return `Se creará «${trimmed}» como hábito nuevo en la colección`;
+	}
+
 	const monthNames = [
 		'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
 		'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -77,21 +93,14 @@
 
 		try {
 			const id = `${year}-${String(month).padStart(2, '0')}`;
-			const habitDefs = validHabits.map((h, i) => ({
-				id: crypto.randomUUID(),
-				monthId: id,
-				name: h.name.trim(),
-				order: i
-			}));
+			const members = validHabits.map((h, i) => ({ name: h.name.trim(), order: i }));
 			await createMonth({
 				id,
 				year,
 				month,
 				mantra: mantra.trim(),
-				habits: habitDefs,
-				setupComplete: true
+				members
 			});
-			await createHabitsForMonth(id, habitDefs);
 			onSetup();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Error al guardar';
@@ -135,8 +144,15 @@
 				<span class="habit-count badge">{validHabitsCount}</span>
 			</div>
 
+			<datalist id="habit-suggestions">
+				{#each allHabits as habit (habit.id)}
+					<option value={habit.name}></option>
+				{/each}
+			</datalist>
+
 			<div class="habits-list">
 				{#each habits as habit, i (i)}
+					{@const hint = getHabitHint(habit.name)}
 					<div class="habit-row">
 						<span class="habit-number">{i + 1}</span>
 						<input
@@ -146,6 +162,8 @@
 							oninput={(e) => updateHabitName(i, (e.target as HTMLInputElement).value)}
 							placeholder="Nombre del hábito"
 							maxlength={100}
+							list="habit-suggestions"
+							aria-describedby={hint ? `habit-hint-${i}` : undefined}
 						/>
 						<div class="habit-actions">
 							<button
@@ -177,6 +195,9 @@
 							</button>
 						</div>
 					</div>
+					{#if hint}
+						<p class="habit-hint" id="habit-hint-{i}" aria-live="polite">{hint}</p>
+					{/if}
 				{/each}
 			</div>
 
@@ -328,6 +349,13 @@
 		outline: 2px solid var(--color-primary);
 		outline-offset: -1px;
 		border-color: var(--color-primary);
+	}
+
+	.habit-hint {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin: -0.25rem 0 0.5rem;
+		padding-left: 2rem;
 	}
 
 	.habit-actions {

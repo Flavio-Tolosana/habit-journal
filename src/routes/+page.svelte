@@ -4,14 +4,14 @@
 	import DayView from '$lib/components/DayView.svelte';
 	import { getToday, getMonthId } from '$lib/utils/dates';
 	import { getMonth } from '$lib/db/months';
-	import { getHabitsForMonth } from '$lib/db/habits';
+	import { getHabitsForMonth, type MonthHabit } from '$lib/db/habits';
 	import { getEntry } from '$lib/db/entries';
-	import type { HabitDefinition, DailyEntry } from '$lib/db/types';
+	import type { DailyEntry } from '$lib/db/types';
 
 	const today = getToday();
 	const monthId = getMonthId(today);
 
-	let habits = $state<HabitDefinition[]>([]);
+	let habits = $state<MonthHabit[]>([]);
 	let entry = $state<DailyEntry | undefined>();
 	let monthExists = $state<boolean | null>(null);
 	let loading = $state(true);

@@ -3,14 +3,19 @@
 	import JournalEditor from './JournalEditor.svelte';
 	import { setHabitCompletion } from '$lib/db/entries';
 	import { formatDisplayDate } from '$lib/utils/dates';
-	import type { HabitDefinition, DailyEntry } from '$lib/db/types';
+	import type { DailyEntry } from '$lib/db/types';
 
 	let {
 		date,
 		habits,
 		entry,
 		readOnly = false
-	}: { date: string; habits: HabitDefinition[]; entry?: DailyEntry; readOnly?: boolean } = $props();
+	}: {
+		date: string;
+		habits: Array<{ id: string; name: string }>;
+		entry?: DailyEntry;
+		readOnly?: boolean;
+	} = $props();
 
 	function handleHabitToggle(habitId: string, completed: boolean) {
 		if (!readOnly) {

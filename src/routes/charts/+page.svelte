@@ -1,18 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Charts from '$lib/components/Charts.svelte';
-	import { getToday, getMonthId, getDaysInMonth } from '$lib/utils/dates';
-	import { getMonth } from '$lib/db/months';
-	import { getHabitsForMonth } from '$lib/db/habits';
-	import { getEntriesForMonth } from '$lib/db/entries';
+	import { getAllMonths } from '$lib/db/months';
+	import { getHabitsForMonth, type MonthHabit } from '$lib/db/habits';
+	import { getAllEntries } from '$lib/db/entries';
 	import { chartDataForMonth, completionRate } from '$lib/utils/stats';
 	import { calculateStreaks } from '$lib/utils/streaks';
-	import type { HabitDefinition, DailyEntry } from '$lib/db/types';
+	import Charts from '$lib/components/Charts.svelte';
+	import type { DailyEntry } from '$lib/db/types';
 
-	const today = getToday();
-	const monthId = getMonthId(today);
-
-	let habits = $state<HabitDefinition[]>([]);
+	let habits = $state<MonthHabit[]>([]);
 	let entries = $state<DailyEntry[]>([]);
 	let loading = $state(true);
 	let chartData = $state<{ labels: string[]; datasets: Array<{ label: string; data: number[] }> }>({
@@ -23,14 +19,25 @@
 	let totalDays = $state(0);
 
 	onMount(async () => {
-		const month = await getMonth(monthId);
-		if (month) {
-			habits = await getHabitsForMonth(monthId);
-			entries = await getEntriesForMonth(monthId);
-			chartData = chartDataForMonth(habits, entries);
-			streaks = calculateStreaks(habits, entries);
-			totalDays = getDaysInMonth(month.year, month.month);
+		const months = await getAllMonths();
+		if (months.length === 0) {
+			loading = false;
+			return;
 		}
+
+		const habitById: Record<string, MonthHabit> = {};
+		for (const month of months) {
+			const monthHabits = await getHabitsForMonth(month.id);
+			for (const habit of monthHabits) {
+				habitById[habit.id] ??= habit;
+			}
+		}
+
+		habits = Object.values(habitById);
+		entries = await getAllEntries();
+		chartData = chartDataForMonth(habits, entries);
+		streaks = calculateStreaks(habits, entries);
+		totalDays = new Set(entries.map((e) => e.date)).size;
 		loading = false;
 	});
 </script>
@@ -89,16 +96,16 @@
 				<thead>
 					<tr>
 						<th>Fecha</th>
-						{#each habits as habit}
+						{#each habits as habit (habit.id)}
 							<th>{habit.name}</th>
 						{/each}
 					</tr>
 				</thead>
 				<tbody>
-					{#each entries as entry}
+					{#each entries as entry (entry.date)}
 						<tr>
 							<td>{entry.date}</td>
-							{#each habits as habit}
+							{#each habits as habit (habit.id)}
 								<td>{entry.completions[habit.id] ? 'Completado' : 'No completado'}</td>
 							{/each}
 						</tr>

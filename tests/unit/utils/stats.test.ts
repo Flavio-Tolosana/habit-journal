@@ -29,12 +29,22 @@ describe('completionRate', () => {
   });
 
   it('handles missing completions for a habit', () => {
-    const entries = [
+    const entries: Array<{ date: string; completions: Record<string, boolean> }> = [
       { date: '2026-08-01', completions: { h2: true } },
       { date: '2026-08-02', completions: { h1: true } },
     ];
     const result = completionRate('h1', entries, 2);
     expect(result).toEqual({ completed: 1, total: 2, rate: 0.5 });
+  });
+
+  it('computes completion rate across multiple months', () => {
+    const entries = [
+      { date: '2026-08-31', completions: { h1: true } },
+      { date: '2026-09-01', completions: { h1: true } },
+      { date: '2026-09-02', completions: { h1: false } },
+    ];
+    const result = completionRate('h1', entries, 3);
+    expect(result).toEqual({ completed: 2, total: 3, rate: 2 / 3 });
   });
 });
 
@@ -79,5 +89,19 @@ describe('chartDataForMonth', () => {
     expect(result.datasets).toEqual([
       { label: 'Exercise', data: [] },
     ]);
+  });
+
+  it('aggregates a habit across multiple months', () => {
+    const habits = [{ id: 'h1', name: 'Exercise' }];
+    const entries = [
+      { date: '2026-08-31', completions: { h1: true } },
+      { date: '2026-09-01', completions: { h1: true } },
+      { date: '2026-09-02', completions: { h1: false } },
+    ];
+
+    const result = chartDataForMonth(habits, entries);
+
+    expect(result.labels).toEqual(['2026-08-31', '2026-09-01', '2026-09-02']);
+    expect(result.datasets).toEqual([{ label: 'Exercise', data: [1, 1, 0] }]);
   });
 });

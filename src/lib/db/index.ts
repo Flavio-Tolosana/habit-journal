@@ -11,10 +11,9 @@ export async function getDB(): Promise<IDBPDatabase<HabitJournalDB>> {
 
 	dbInstance = await openDB<HabitJournalDB>(DB_NAME, DB_VERSION, {
 		upgrade(db) {
-			const monthStore = db.createObjectStore('months', { keyPath: 'id' });
+			db.createObjectStore('months', { keyPath: 'id' });
 
-			const habitStore = db.createObjectStore('habits', { keyPath: 'id' });
-			habitStore.createIndex('by-month', 'monthId');
+			db.createObjectStore('habits', { keyPath: 'id' });
 
 			const entryStore = db.createObjectStore('entries', { keyPath: 'date' });
 			entryStore.createIndex('by-month', 'monthId');

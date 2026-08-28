@@ -1,24 +1,27 @@
+export interface Habit {
+	id: string; // slug determinista derivado del nombre
+	name: string; // nombre canónico (único tras trim, case-sensitive para UX)
+}
+
+export interface MonthMembership {
+	habitId: string; // Habit.id
+	order: number;
+}
+
 export interface Month {
 	id: string; // 'YYYY-MM'
 	year: number;
 	month: number; // 1-12
 	mantra: string;
-	habits: HabitDefinition[];
+	memberships: MonthMembership[];
 	setupComplete: boolean;
-}
-
-export interface HabitDefinition {
-	id: string; // UUID v4
-	monthId: string; // Month.id
-	name: string;
-	order: number;
 }
 
 export interface DailyEntry {
 	date: string; // 'YYYY-MM-DD'
 	monthId: string; // Month.id
 	journalText: string;
-	completions: Record<string, boolean>; // habitId → completed
+	completions: Record<string, boolean>; // Habit.id → completed
 }
 
 export interface Meta {
@@ -33,8 +36,7 @@ export interface HabitJournalDB {
 	};
 	habits: {
 		key: string;
-		value: HabitDefinition;
-		indexes: { 'by-month': string };
+		value: Habit;
 	};
 	entries: {
 		key: string;
