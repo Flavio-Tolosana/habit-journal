@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href="{base}/favicon.svg" />
+	<link rel="icon" href="{base}/icon.svg" />
 	<meta name="theme-color" content="#ffffff" />
 </svelte:head>
 
