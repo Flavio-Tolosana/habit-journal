@@ -113,7 +113,8 @@ describe('chartDataForMonth', () => {
 describe('monthCountsData', () => {
   it('builds a full month of day labels with completed habit counts', () => {
     const habitIds = ['h1', 'h2', 'h3'];
-    const entriesByDate = new Map([
+    type MonthEntry = { date: string; completions: Record<string, boolean> };
+    const entriesByDate = new Map<string, MonthEntry>([
       ['2026-08-01', { date: '2026-08-01', completions: { h1: true, h2: true, h3: false } }],
       ['2026-08-03', { date: '2026-08-03', completions: { h1: true } }],
     ]);

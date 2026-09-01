@@ -4,6 +4,7 @@
 
 	const tabs = [
 		{ href: '/', label: 'Hoy', icon: '📅' },
+		{ href: '/diary', label: 'Diario', icon: '📖' },
 		{ href: '/month', label: 'Calendario', icon: '📆' },
 		{ href: '/charts', label: 'Gráficas', icon: '📊' },
 		{ href: '/settings', label: 'Ajustes', icon: '⚙️' }

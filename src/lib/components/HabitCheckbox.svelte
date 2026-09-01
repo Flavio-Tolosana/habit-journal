@@ -2,18 +2,25 @@
 	let {
 		checked = $bindable(false),
 		label,
-		onchange
-	}: { checked?: boolean; label: string; onchange?: (checked: boolean) => void } = $props();
+		onchange,
+		disabled = false
+	}: { checked?: boolean; label: string; onchange?: (checked: boolean) => void; disabled?: boolean } =
+		$props();
 
 	function handleChange(e: Event) {
-		const target = e.target as HTMLInputElement;
-		checked = target.checked;
+		checked = (e.target as HTMLInputElement).checked;
 		onchange?.(checked);
 	}
 </script>
 
-<label class="habit-checkbox">
-	<input type="checkbox" {checked} onchange={handleChange} aria-label={label} />
+<label class="habit-checkbox" class:disabled>
+	<input
+		type="checkbox"
+		{checked}
+		{disabled}
+		onchange={handleChange}
+		aria-label={label}
+	/>
 	<span class="checkmark" aria-hidden="true"></span>
 	<span class="habit-label">{label}</span>
 </label>
@@ -91,5 +98,14 @@
 
 	input:checked ~ .habit-label {
 		color: var(--color-text-muted);
+	}
+
+	.habit-checkbox.disabled {
+		opacity: 0.6;
+		cursor: default;
+	}
+
+	.habit-checkbox.disabled:hover {
+		background-color: transparent;
 	}
 </style>
