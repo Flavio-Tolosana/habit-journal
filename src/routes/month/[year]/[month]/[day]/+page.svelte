@@ -20,11 +20,7 @@
 	);
 	const monthId = $derived(`${data.year}-${String(data.month).padStart(2, '0')}`);
 
-	const isPast = $derived(() => {
-		const today = new Date();
-		const entryDate = new Date(data.year, data.month - 1, data.day);
-		return entryDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-	});
+
 
 	async function loadDay() {
 		loaded = false;
@@ -76,7 +72,6 @@
 			date={dateStr}
 			{habits}
 			{entry}
-			readOnly={isPast()}
 		/>
 
 		{#if entry}
