@@ -49,7 +49,7 @@
 		<dl class="info-list">
 			<div class="info-row">
 				<dt>Versión</dt>
-				<dd>0.1.0</dd>
+				<dd>1.0.0</dd>
 			</div>
 			{#if !loading}
 				<div class="info-row">
